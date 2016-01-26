@@ -34,12 +34,13 @@ real  :: depth_total, depth_e, depth_h, width, length, volume_e_x, outflow_x
 real :: energy_x, volume_h_x, area, density, heat_c, temp_change
 real  :: flow_in_hyp_x, flow_in_epi_x, flow_out_epi_x, flow_out_hyp_x
 real  :: epix, hypox, dif_epi_x, dif_hyp_x, x, flow_epi_x, flow_hyp_x
-real  :: adv_epi_x, adv_hyp_x
+real  :: adv_epi_x, adv_hyp_x,delta_t
 
 depth_total = 30
 width = 200
 length = 17000
 area = width*length
+delta_t = 24*60*60
 
 !-------------------------------------------------------------------------
 !     generate flow and energey temporal variables
@@ -54,7 +55,7 @@ area = width*length
 flow_constant = 365/(2*Pi)
 
 ! generates flow eacy day as a sin wave with the peak flow on April 1
-! at 90000 cfs, and lowest point is 30000 cfs on October 1
+! at 90000 cfd(cubic feet per day), and lowest point is 30000 cfd on October 1
 ! days are calendar year (day = 1 = January 1)
 
 
@@ -62,11 +63,11 @@ do  i=0,10*365
 
    ! ------ get flow in to the reservoir for the year ------
    flow_in(i) =  sin( i/flow_constant)
-   flow_in(i) = (flow_in(i) + 2)*30000   ! gets flow to vary from 30000 to 90000 cfs
+   flow_in(i) = (flow_in(i) + 2)*30000/delta_t   ! unit transfer from cfd to cfs
 
    ! ------ get flow in to the reservoir for the year ------
    flow_out(i) =  sin( i/flow_constant)
-   flow_out(i) = (flow_out(i) + 2)*30000   ! gets flow to vary from 30000 to 90000
+   flow_out(i) = (flow_out(i) + 2)*30000/delta_t   ! unit transfer from cfd to cfs
 
    ! ------ get flow exchange between the two layers for the year ------
    ! ------ here we assume the water exchange between the two layers equal to outflow -----
@@ -137,25 +138,25 @@ do  i=2,10*365
   ! calculate temperature change due to diffusion
   ! NOTE: don't need to multiply by heat capacity or density of water because
   !       energy component is divided by those two
-  dif_epi_x  = ( v_t * area * (temp_hypo(i-1) - temp_epil(i-1)))/volume_e_x * 24 * 60 * 60
-  dif_hyp_x  = ( v_t * area * (temp_epil(i-1) - temp_hypo(i-1)))/volume_h_x * 24 * 60 * 60
+  dif_epi_x  = ( v_t * area * (temp_hypo(i-1) - temp_epil(i-1)))/volume_e_x
+  dif_hyp_x  = ( v_t * area * (temp_epil(i-1) - temp_hypo(i-1)))/volume_h_x
 
   !calculate temperature change due to advection
   ! 
-  adv_epi_x = ( flow_out_epi_x * (temp_hypo(i-1)-temp_epil(i-1)) )/volume_e_x*24*60*60
-  adv_hyp_x = ( flow_in_hyp_x * (temp_epil(i-1)-temp_hypo(i-1)) )/volume_e_x*24*60*60
+  adv_epi_x = ( flow_out_epi_x * (temp_hypo(i-1)-temp_epil(i-1)) )/volume_e_x*delta_t
+  adv_hyp_x = ( flow_in_hyp_x * (temp_epil(i-1)-temp_hypo(i-1)) )/volume_h_x*delta_t
 
   ! calculate change in EPILIMNION  temperature (celsius)
-  flow_epi_x = flow_in(i)*(flow_Tin(i)-temp_epil(i-1))/volume_e_x*24*60*60
+  flow_epi_x = flow_in(i)*(flow_Tin(i)-temp_epil(i-1))/volume_e_x*delta_t
   temp_change_ep(i) = flow_epi_x + energy_x + dif_epi_x + adv_epi_x
 
   ! save each temperature change component
   energy_tot(i) = energy_x
   diffusion_tot(i) = dif_epi_x
-  T_in_tot(i) = flow_in_epi_x*flow_Tin(i)/volume_e_x*24*60*60
-  T_out_tot(i) = flow_out_epi_x*temp_epil(i-1)/volume_e_x*24*60*60
+  T_in_tot(i) = flow_in_epi_x*flow_Tin(i)/volume_e_x*delta_t
+  T_out_tot(i) = flow_out_epi_x*temp_epil(i-1)/volume_e_x*delta_t
   ! update epilimnion volume for next time step
-  volume_e_x = volume_e_x + (flow_in_epi_x - flow_out_epi_x)*24*60*60
+  volume_e_x = volume_e_x + (flow_in_epi_x - flow_out_epi_x)*delta_t
   temp_epil(i) = temp_epil(i-1) +  temp_change_ep(i)
 
   ! calculate change in HYPOLIMNION  temperature (celsius)
